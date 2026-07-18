@@ -1,0 +1,15 @@
+.git
+.github
+.nuget
+.dotnet-tools
+node_modules
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/test-results
+**/playwright-report
+coverage
+docs
+*.db
+*.log

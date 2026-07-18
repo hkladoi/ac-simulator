@@ -1,0 +1,17 @@
+{
+  "name": "ac-thermal-simulator",
+  "version": "2.0.0",
+  "private": true,
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev": "npm run dev -w @ac-simulator/web",
+    "build": "npm run build -w @ac-simulator/web",
+    "typecheck": "npm run typecheck -w @ac-simulator/web",
+    "test": "npm run test -w @ac-simulator/web",
+    "test:e2e": "npm run test:e2e -w @ac-simulator/web",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "security:audit": "npm audit --audit-level=high",
+    "performance:budget": "node scripts/check-bundle-budget.mjs"
+  },
+  "engines": { "node": ">=20.19" }
+}

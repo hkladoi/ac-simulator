@@ -1,0 +1,49 @@
+name: ci
+on:
+  pull_request:
+  push: { branches: [main] }
+permissions: { contents: read }
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - run: npm run performance:budget
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - name: Start real API for full-stack E2E
+        run: dotnet run --project apps/api/src/Api/Api.csproj > api-e2e.log 2>&1 &
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://127.0.0.1:5080
+          DatabaseProvider: Sqlite
+          ConnectionStrings__Default: Data Source=/tmp/ac-e2e.db
+          ShareTokenPepper: ci-e2e-pepper-at-least-32-bytes
+          AllowedOrigins__0: http://127.0.0.1:4173
+      - run: curl --fail --retry 20 --retry-delay 2 --retry-all-errors http://127.0.0.1:5080/health/ready
+      - run: npm run test:e2e
+        env: { E2E_FULLSTACK: '1' }
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - run: dotnet test apps/api/tests/IntegrationTests/IntegrationTests.csproj --configuration Release
+      - run: dotnet tool install --global dotnet-ef --version 8.0.13
+      - run: dotnet ef migrations script --idempotent --project apps/api/src/Api --startup-project apps/api/src/Api --output migration.sql
+        env:
+          DatabaseProvider: SqlServer
+          ConnectionStrings__Default: Server=localhost;Database=AcThermalCi;User Id=sa;Password=CiOnly_NotUsed_123!;TrustServerCertificate=true
+      - uses: docker/build-push-action@v6
+        with: { context: ., file: apps/api/Dockerfile, push: false }
+      - uses: docker/build-push-action@v6
+        with: { context: ., file: apps/web/Dockerfile, push: false }

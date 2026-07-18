@@ -1,0 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+namespace AcSimulator.Api.Application;
+public sealed record ProjectDto(Guid Id,string Name,long Revision,Guid? CurrentVersionId,string ConfigJson,string? ThumbnailUrl,DateTime CreatedAt,DateTime UpdatedAt);
+public sealed record CreateProjectRequest([property:Required,MaxLength(120)]string Name,string ConfigJson);
+public sealed record RenameProjectRequest([property:Required,MaxLength(120)]string Name,long ExpectedRevision);
+public sealed record SaveDraftRequest(string ConfigJson,long ExpectedRevision,string? Reason="autosave");
+public sealed record CreateVersionRequest(string Reason="checkpoint");
+public sealed record ScenarioRequest([property:Required,MaxLength(120)]string Name,Guid BaseVersionId,string SimulationConfigJson,string ResultSummaryJson);
+public sealed record RenameScenarioRequest([property:Required,MaxLength(120)]string Name);
+public sealed record ShareRequest(DateTime? ExpiresAt);
+public sealed record ReportRequest(Guid? ScenarioId);
+public sealed record ScenarioDto(Guid Id,string Name,Guid BaseVersionId,string SimulationConfigJson,string ResultSummaryJson,DateTime CreatedAt);
+public sealed record ReportDto(Guid Id,Guid? ScenarioId,string Status,string? FileUrl,string? Error,DateTime CreatedAt,DateTime? CompletedAt);
+public sealed record PagedResponse<T>(IReadOnlyList<T> Items,int Page,int PageSize,int Total);

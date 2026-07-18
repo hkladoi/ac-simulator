@@ -1,0 +1,36 @@
+services:
+  web:
+    build: { context: .., dockerfile: apps/web/Dockerfile }
+    ports: ["8080:8080"]
+    depends_on: { api: { condition: service_healthy } }
+    read_only: true
+    tmpfs: [/tmp]
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DatabaseProvider: SqlServer
+      ConnectionStrings__Default: ${ConnectionStrings__Default}
+      ShareTokenPepper: ${ShareTokenPepper}
+      AllowedOrigins__0: ${AllowedOrigins__0}
+      DataProtectionKeysPath: /app/keys
+    volumes: [reports:/app/wwwroot/reports, keys:/app/keys]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck: { test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready"], interval: 15s, timeout: 5s, retries: 10 }
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment: { ACCEPT_EULA: "Y", MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}" }
+    volumes: [sql-data:/var/opt/mssql]
+    healthcheck: { test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"], interval: 15s, timeout: 5s, retries: 20 }
+  migrate:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    command: ["dotnet", "Api.dll", "--migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DatabaseProvider: SqlServer
+      ConnectionStrings__Default: ${ConnectionStrings__Default}
+      ShareTokenPepper: ${ShareTokenPepper}
+    depends_on: { sql: { condition: service_healthy } }
+    restart: "no"
+volumes: { sql-data: {}, reports: {}, keys: {} }
