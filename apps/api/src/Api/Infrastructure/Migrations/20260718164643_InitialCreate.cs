@@ -11,6 +11,160 @@ namespace AcSimulator.Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            if (ActiveProvider.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                migrationBuilder.Sql("""
+                    CREATE TABLE [AspNetRoles] (
+                        [Id] nvarchar(450) NOT NULL,
+                        [Name] nvarchar(256) NULL,
+                        [NormalizedName] nvarchar(256) NULL,
+                        [ConcurrencyStamp] nvarchar(max) NULL,
+                        CONSTRAINT [PK_AspNetRoles] PRIMARY KEY ([Id])
+                    );
+
+                    CREATE TABLE [AspNetUsers] (
+                        [Id] nvarchar(450) NOT NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        [UserName] nvarchar(256) NULL,
+                        [NormalizedUserName] nvarchar(256) NULL,
+                        [Email] nvarchar(256) NULL,
+                        [NormalizedEmail] nvarchar(256) NULL,
+                        [EmailConfirmed] bit NOT NULL,
+                        [PasswordHash] nvarchar(max) NULL,
+                        [SecurityStamp] nvarchar(max) NULL,
+                        [ConcurrencyStamp] nvarchar(max) NULL,
+                        [PhoneNumber] nvarchar(max) NULL,
+                        [PhoneNumberConfirmed] bit NOT NULL,
+                        [TwoFactorEnabled] bit NOT NULL,
+                        [LockoutEnd] datetimeoffset NULL,
+                        [LockoutEnabled] bit NOT NULL,
+                        [AccessFailedCount] int NOT NULL,
+                        CONSTRAINT [PK_AspNetUsers] PRIMARY KEY ([Id])
+                    );
+
+                    CREATE TABLE [Projects] (
+                        [Id] uniqueidentifier NOT NULL,
+                        [OwnerId] nvarchar(450) NOT NULL,
+                        [Name] nvarchar(120) NOT NULL,
+                        [ConfigJson] nvarchar(max) NOT NULL,
+                        [CurrentVersionId] uniqueidentifier NULL,
+                        [ThumbnailUrl] nvarchar(max) NULL,
+                        [Revision] bigint NOT NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        [UpdatedAt] datetime2 NOT NULL,
+                        [DeletedAt] datetime2 NULL,
+                        CONSTRAINT [PK_Projects] PRIMARY KEY ([Id])
+                    );
+
+                    CREATE TABLE [Reports] (
+                        [Id] uniqueidentifier NOT NULL,
+                        [ProjectId] uniqueidentifier NOT NULL,
+                        [ScenarioId] uniqueidentifier NULL,
+                        [Status] nvarchar(max) NOT NULL,
+                        [FileUrl] nvarchar(max) NULL,
+                        [Error] nvarchar(max) NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        [CompletedAt] datetime2 NULL,
+                        CONSTRAINT [PK_Reports] PRIMARY KEY ([Id])
+                    );
+
+                    CREATE TABLE [AspNetRoleClaims] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [RoleId] nvarchar(450) NOT NULL,
+                        [ClaimType] nvarchar(max) NULL,
+                        [ClaimValue] nvarchar(max) NULL,
+                        CONSTRAINT [PK_AspNetRoleClaims] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [AspNetUserClaims] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [UserId] nvarchar(450) NOT NULL,
+                        [ClaimType] nvarchar(max) NULL,
+                        [ClaimValue] nvarchar(max) NULL,
+                        CONSTRAINT [PK_AspNetUserClaims] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [AspNetUserLogins] (
+                        [LoginProvider] nvarchar(450) NOT NULL,
+                        [ProviderKey] nvarchar(450) NOT NULL,
+                        [ProviderDisplayName] nvarchar(max) NULL,
+                        [UserId] nvarchar(450) NOT NULL,
+                        CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
+                        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [AspNetUserRoles] (
+                        [UserId] nvarchar(450) NOT NULL,
+                        [RoleId] nvarchar(450) NOT NULL,
+                        CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
+                        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [AspNetRoles] ([Id]) ON DELETE CASCADE,
+                        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [AspNetUserTokens] (
+                        [UserId] nvarchar(450) NOT NULL,
+                        [LoginProvider] nvarchar(450) NOT NULL,
+                        [Name] nvarchar(450) NOT NULL,
+                        [Value] nvarchar(max) NULL,
+                        CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
+                        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [ProjectVersions] (
+                        [Id] uniqueidentifier NOT NULL,
+                        [ProjectId] uniqueidentifier NOT NULL,
+                        [SchemaVersion] int NOT NULL,
+                        [ConfigJson] nvarchar(max) NOT NULL,
+                        [CreatedBy] nvarchar(max) NOT NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        [Reason] nvarchar(max) NOT NULL,
+                        CONSTRAINT [PK_ProjectVersions] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_ProjectVersions_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [Projects] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [Scenarios] (
+                        [Id] uniqueidentifier NOT NULL,
+                        [ProjectId] uniqueidentifier NOT NULL,
+                        [Name] nvarchar(max) NOT NULL,
+                        [BaseVersionId] uniqueidentifier NOT NULL,
+                        [SimulationConfigJson] nvarchar(max) NOT NULL,
+                        [ResultSummaryJson] nvarchar(max) NOT NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        CONSTRAINT [PK_Scenarios] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_Scenarios_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [Projects] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE [ShareLinks] (
+                        [Id] uniqueidentifier NOT NULL,
+                        [ProjectId] uniqueidentifier NOT NULL,
+                        [TokenHash] nvarchar(450) NOT NULL,
+                        [Permission] nvarchar(max) NOT NULL,
+                        [ExpiresAt] datetime2 NULL,
+                        [RevokedAt] datetime2 NULL,
+                        [CreatedAt] datetime2 NOT NULL,
+                        CONSTRAINT [PK_ShareLinks] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_ShareLinks_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [Projects] ([Id]) ON DELETE CASCADE
+                    );
+
+                    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [AspNetRoleClaims] ([RoleId]);
+                    CREATE UNIQUE INDEX [RoleNameIndex] ON [AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
+                    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [AspNetUserClaims] ([UserId]);
+                    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [AspNetUserLogins] ([UserId]);
+                    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [AspNetUserRoles] ([RoleId]);
+                    CREATE INDEX [EmailIndex] ON [AspNetUsers] ([NormalizedEmail]);
+                    CREATE UNIQUE INDEX [UserNameIndex] ON [AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
+                    CREATE INDEX [IX_Projects_OwnerId_UpdatedAt] ON [Projects] ([OwnerId], [UpdatedAt]);
+                    CREATE INDEX [IX_ProjectVersions_ProjectId_CreatedAt] ON [ProjectVersions] ([ProjectId], [CreatedAt]);
+                    CREATE INDEX [IX_Reports_ProjectId_CreatedAt] ON [Reports] ([ProjectId], [CreatedAt]);
+                    CREATE INDEX [IX_Scenarios_ProjectId_CreatedAt] ON [Scenarios] ([ProjectId], [CreatedAt]);
+                    CREATE INDEX [IX_ShareLinks_ProjectId] ON [ShareLinks] ([ProjectId]);
+                    CREATE UNIQUE INDEX [IX_ShareLinks_TokenHash] ON [ShareLinks] ([TokenHash]);
+                    """);
+                return;
+            }
+
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
